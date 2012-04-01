@@ -20,6 +20,22 @@ that goes pixel by pixel, rounds the individual R, G, and B channels to either 0
             // The filereader code was ripped unceremoniously from http://www.html5rocks.com/en/tutorials/file/dndfiles/
             document.getElementById('uploader').addEventListener('change', handleFileSelect, false);
 
+            function drawDitherResult(canvas, ditherer, text) {
+                var ctx = canvas.getContext('2d');
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                ditherer(imageData);
+                ctx.putImageData(imageData, 0, 0);
+
+                var img = new Image();
+                img.src = canvas.toDataURL("image/png");
+
+                h2 = document.createElement('h2');
+                h2.innerText = text;
+
+                document.body.appendChild(h2);
+                document.body.appendChild(img);
+            }
+
             function handleFileSelect(e) {
                 var file = e.target.files[0];
 
@@ -40,23 +56,30 @@ that goes pixel by pixel, rounds the individual R, G, and B channels to either 0
                         var canvas = document.createElement('canvas');
                         canvas.width = width;
                         canvas.height = height;
+
                         var ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0);
 
-                        var imageData = ctx.getImageData(0, 0, width, height);
-                        imageData = dither3bit(imageData);
-                        ctx.putImageData(imageData, 0, 0);
-                        canvas.style.display = "none";
+                        drawDitherResult(canvas, ditherAtkinsons, 'Atkinsons');
 
-                        img.src = canvas.toDataURL("image/png");
-                        document.body.appendChild(img);
+                        ctx.drawImage(img, 0, 0); // Reset
+
+                        drawDitherResult(canvas, ditherFloydSteinberg, 'Floyd-Steinberg');
                     }
                     img.src = e.target.result;
                 }
                 reader.readAsDataURL(file);
+
+                this.style.display = 'none';
             }
 
-            function dither3bit(imageData) {
+            function adjustPixel(data, i, error, multiplier) {
+                data[i] = data[i] + multiplier * error[0]; 
+                data[i + 1] = data[i + 1] + multiplier * error[1]; 
+                data[i + 2] = data[i + 2] + multiplier * error[2]; 
+            }
+
+            function ditherAtkinsons(imageData) {
                 var width = imageData.width,
                     height = imageData.height,
                     data = imageData.data;
@@ -67,9 +90,76 @@ that goes pixel by pixel, rounds the individual R, G, and B channels to either 0
                         old_g = data[i + 1]
                         old_b = data[i + 2];
 
-                        new_r = (old_r > 130) ? 0xff : 0;
-                        new_g = (old_g > 130) ? 0xff : 0;
-                        new_b = (old_b > 130) ? 0xff : 0;
+                        new_r = (old_r > 127) ? 0xff : 0;
+                        new_g = (old_g > 127) ? 0xff : 0;
+                        new_b = (old_b > 127) ? 0xff : 0;
+
+                        data[i] = new_r;
+                        data[i + 1] = new_g;
+                        data[i + 2] = new_b;
+
+                        err_r = old_r - new_r;
+                        err_g = old_g - new_g;
+                        err_b = old_b - new_b;
+
+                        // Redistribute the pixel's error like this:
+                        //       *  1/8 1/8
+                        //  1/8 1/8 1/8
+                        //      1/8 
+
+                        // The ones to the right...
+                        if (x < width - 1) {
+                            adj_i = i + 4;
+                            adjustPixel(data, adj_i, [err_r, err_g, err_b], 1/8);
+
+                            // The pixel that's down and to the right
+                            if (y < height - 1) {
+                                adj_i = adj_i + (width * 4) + 4;
+                                adjustPixel(data, adj_i, [err_r, err_g, err_b], 1/8);
+                            }
+
+                            // The pixel two over
+                            if (x < width - 2) {
+                                adj_i = i + 8;
+                                adjustPixel(data, adj_i, [err_r, err_g, err_b], 1/8);
+                            }
+                        }
+
+                        if (y < height - 1) {
+                            // The one right below
+                            adj_i = i + (width * 4);
+                            adjustPixel(data, adj_i, [err_r, err_g, err_b], 1/8);
+
+                            if (x > 0) {
+                                // The one to the left
+                                adj_i = adj_i - 4;
+                                adjustPixel(data, adj_i, [err_r, err_g, err_b], 1/8);
+                            }
+
+                            if (y < height - 2) {
+                                // The one two down
+                                adj_i = i + (2 * width * 4);
+                                adjustPixel(data, adj_i, [err_r, err_g, err_b], 1/8);
+                            }
+                        }
+                    }
+                }
+            }
+
+            function ditherFloydSteinberg(imageData) {
+                var width = imageData.width,
+                    height = imageData.height,
+                    data = imageData.data;
+                for (var y = 0; y < height; y++) {
+                    for (var x = 0; x < width; x++) {
+                        i = 4 * (y * width + x);
+                        old_r = data[i]
+                        old_g = data[i + 1]
+                        old_b = data[i + 2];
+
+                        new_r = (old_r > 127) ? 0xff : 0;
+                        new_g = (old_g > 127) ? 0xff : 0;
+                        new_b = (old_b > 127) ? 0xff : 0;
 
                         data[i] = new_r;
                         data[i + 1] = new_g;
@@ -86,38 +176,28 @@ that goes pixel by pixel, rounds the individual R, G, and B channels to either 0
                         // The ones to the right...
                         if (x < width - 1) {
                             right_i = i + 4;
-                            data[right_i] = data[right_i] + 7/16 * err_r; 
-                            data[right_i + 1] = data[right_i + 1] + 7/16 * err_g; 
-                            data[right_i + 2] = data[right_i + 2] + 7/16 * err_b; 
+                            adjustPixel(data, right_i, [err_r, err_g, err_b], 7/16);
 
                             // The pixel that's down and to the right
                             if (y < height - 1) {
                                 next_right_i = right_i + (width * 4)
-                                data[next_right_i] = data[next_right_i] + 1/16 * err_r; 
-                                data[next_right_i + 1] = data[next_right_i + 1] + 1/16 * err_g; 
-                                data[next_right_i + 2] = data[next_right_i + 2] + 1/16 * err_b; 
+                                adjustPixel(data, next_right_i, [err_r, err_g, err_b], 1/16);
                             }
                         }
                         
                         if (y < height - 1) {
                             // The one right below
                             down_i = i + (width * 4);
-                            data[down_i] = data[down_i] + 5/16 * err_r;
-                            data[down_i + 1] = data[down_i + 1] + 5/16 * err_g;
-                            data[down_i + 2] = data[down_i + 2] + 5/16 * err_b;
+                            adjustPixel(data, down_i, [err_r, err_g, err_b], 5/16);
 
                             if (x > 0) {
                                 // The one down and to the left...
                                 left_i = down_i - 4;
-                                data[left_i] = data[left_i] + 3/16 * err_r;
-                                data[left_i + 1] = data[left_i + 1] + 3/16 * err_g;
-                                data[left_i + 2] = data[left_i + 2] + 3/16 * err_b;
+                                adjustPixel(data, left_i, [err_r, err_g, err_b], 3/16);
                             }
                         }
                     }
                 }
-
-                return imageData;
             }
         </script>
     </body>
