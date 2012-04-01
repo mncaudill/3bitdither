@@ -12,7 +12,7 @@
      <body>
         <h1>3 Bit Dither</h1>
         <div style="width:600px;">
-            <p>Implemented by Nolan Caudill</p>
+            <p>Implemented by Nolan Caudill, code on github <a href="https://github.com/mncaudill/3bitdither">here</a></p>
             <p>This demo currently uses two different error-diffusion dithering algorithms: <a href="http://verlagmartinkoch.at/software/dither/index.html">Atkinson's</a> and the <a href="http://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering">Floyd-Steinberg</a> algorithm.
 
             <p>Error-diffusion means that the algorithm goes pixel by pixel, rounds the individual R, G, and B channels to either 0x00 or 0xff, and then distributes those differences (which the algorithm calls the "quantization error") in differing amounts to pixels further down the line. It being a 3-bit dithering means that your red, blue, and green channels are represented by a single bit (off or on), giving you a total of 8 colors.</p>
