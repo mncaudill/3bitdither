@@ -2,13 +2,21 @@
 <html>
     <head>
         <title>3 bit dither</title>
+        <style>
+            body {
+                font-family: san-serif;
+                font-size: 12px;
+            }
+        </style>
     </head>
      <body>
         <h1>3 Bit Dither</h1>
         <div style="width:600px;">
             <p>Implemented by Nolan Caudill</p>
-        <p>This particular dither uses the <a href="http://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering">Floyd-Steinberg algorithm</a> 
-that goes pixel by pixel, rounds the individual R, G, and B channels to either 0x00 or 0xff, and then distributes those differences (which the algorithm calls the "quantization error") in differing amounts to pixels further down the line. This algorithm squeezes your palette down to just 8 colors, while still giving a decent approximation of the original image.</p>
+            <p>This demo currently uses two different error-diffusion dithering algorithms: <a href="http://verlagmartinkoch.at/software/dither/index.html">Atkinson's</a> and the <a href="http://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering">Floyd-Steinberg</a> algorithm.
+
+            <p>Error-diffusion means that the algorithm goes pixel by pixel, rounds the individual R, G, and B channels to either 0x00 or 0xff, and then distributes those differences (which the algorithm calls the "quantization error") in differing amounts to pixels further down the line. It being a 3-bit dithering means that your red, blue, and green channels are represented by a single bit (off or on), giving you a total of 8 colors.</p>
+
 <p>This runs completely client-side, using the FileReader and canvas APIs. If you have a somewhat modern browser, this should work. Also, you can right-click and save the result of the dithering.</p>
         </div>
 
