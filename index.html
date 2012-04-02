@@ -190,11 +190,11 @@
                             }
                         }
 
-                        avg_r = sum_r / 9;
-                        avg_g = sum_g / 9;
-                        avg_b = sum_b / 9;
+                        avg_r = (sum_r / 9) > 127 ? 0xff : 00;
+                        avg_g = (sum_g / 9) > 127 ? 0xff : 00;
+                        avg_b = (sum_b / 9) > 127 ? 0xff : 00;
 
-                        avg_lum = .3 * avg_r + .59 * avg_g + .11 * avg_b;
+                        avg_lum = (avg_r + avg_g + avg_b) / 3;
                         scaled = Math.round((avg_lum * 9) / 255);
 
                         if (scaled < 9) {
