@@ -84,6 +84,9 @@
 
                         ctx.drawImage(img, 0, 0);
                         drawDitherResult(canvas, ditherBayer, 'Bayer (ordered) - 2 bit');
+
+                        ctx.drawImage(img, 0, 0);
+                        drawDitherResult(canvas, dither8Bit, 'Google Maps 8-Bit');
                     }
                     img.src = e.target.result;
                 }
@@ -96,6 +99,46 @@
                 data[i] = data[i] + multiplier * error[0]; 
                 data[i + 1] = data[i + 1] + multiplier * error[1]; 
                 data[i + 2] = data[i + 2] + multiplier * error[2]; 
+            }
+
+            function dither8Bit(imageData) {
+                var width = imageData.width,
+                    height = imageData.height,
+                    data = imageData.data;
+
+                size = 4;
+                for (y = 0; y < height; y += size) {
+                    for (x = 0; x < width; x += size) {
+
+                        sum_r = 0;
+                        sum_g = 0;
+                        sum_b = 0;
+
+                        for (s_y = 0; s_y < size; s_y++) {
+                            for (s_x = 0; s_x < size; s_x++) {
+                                i = 4 * (width * (y + s_y) + (x + s_x));
+
+                                sum_r += data[i];
+                                sum_g += data[i + 1];
+                                sum_b += data[i + 2];
+                            }
+                        }
+
+                        avg_r = (sum_r / (size * size)) > 127 ? 0xff : 00;
+                        avg_g = (sum_g / (size * size)) > 127 ? 0xff : 00;
+                        avg_b = (sum_b / (size * size)) > 127 ? 0xff : 00;
+
+                        for (s_y = 0; s_y < size; s_y++) {
+                            for (s_x = 0; s_x < size; s_x++) {
+                                i = 4 * (width * (y + s_y) + (x + s_x));
+
+                                data[i] = avg_r;
+                                data[i + 1] = avg_g;
+                                data[i + 2] = avg_b;
+                            }
+                        }
+                    }
+                }
             }
 
             function ditherBayer(imageData) {
